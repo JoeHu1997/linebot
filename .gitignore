@@ -1,0 +1,16 @@
+# Python 忽略
+__pycache__/
+*.pyc
+*.pyo
+*.pyd
+env/
+venv/
+myenv/
+.Python
+*.db
+
+# VSCode 忽略
+.vscode/
+
+# 其他忽略
+.DS_Store
