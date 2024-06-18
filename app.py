@@ -18,7 +18,7 @@ def callback():
     signature = request.headers['X-Line-Signature']
 
     # 獲取請求正文
-    body = request.get_data(as_text=True)
+    body =  request.get_data(as_text=True)
     app.logger.info(f"Request body: {body}")
 
     # 驗證簽名
