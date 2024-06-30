@@ -8,5 +8,9 @@ app.config.from_object(Config)
 # 註冊藍圖
 app.register_blueprint(line_bot_bp, url_prefix='/line_bot')
 
+@app.route('/')
+def index():
+    return 'Hello, this is the LINE bot service.'
+
 if __name__ == "__main__":
     app.run()
