@@ -39,8 +39,10 @@ def handle_message(event):
     incoming_message = event.message.text
     app.logger.info(f"Received message: {incoming_message}")
 
-    # 回應相同的訊息
-    response_message = TextSendMessage(text=incoming_message)
+    if "結構物計算" in incoming_message:
+        response_message = TextSendMessage(text="沒有問題")
+    else:
+        response_message = TextSendMessage(text=incoming_message)
     
     app.logger.info(f"Response message: {response_message}")
     line_bot_api.reply_message(
