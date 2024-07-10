@@ -3,18 +3,25 @@ from linebot import LineBotApi, WebhookHandler
 from linebot.exceptions import InvalidSignatureError
 from linebot.models import MessageEvent, TextMessage, TextSendMessage
 import os
+import psycopg2
 from dotenv import load_dotenv
 
-load_dotenv()
+load_dotenv()  # 載入 .env 文件中的環境變數
 
 app = Flask(__name__)
 
 # 從環境變量中獲取 LINE 的 Channel Access Token 和 Channel Secret
 LINE_CHANNEL_ACCESS_TOKEN = os.getenv('LINE_CHANNEL_ACCESS_TOKEN')
 LINE_CHANNEL_SECRET = os.getenv('LINE_CHANNEL_SECRET')
+DATABASE_URL = os.getenv('DATABASE_URL')
 
 line_bot_api = LineBotApi(LINE_CHANNEL_ACCESS_TOKEN)
 handler = WebhookHandler(LINE_CHANNEL_SECRET)
+
+# 連接到 PostgreSQL 資料庫
+def get_db_connection():
+    conn = psycopg2.connect(DATABASE_URL)
+    return conn
 
 @app.route("/")
 def index():
@@ -39,8 +46,16 @@ def handle_message(event):
     incoming_message = event.message.text
     app.logger.info(f"Received message: {incoming_message}")
 
-    if "結構物計算" in incoming_message:
-        response_message = TextSendMessage(text="沒有問題")
+    # 查詢資料庫中是否有對應的回應
+    conn = get_db_connection()
+    cur = conn.cursor()
+    cur.execute("SELECT response FROM keyword_responses WHERE keyword = %s", (incoming_message,))
+    result = cur.fetchone()
+    cur.close()
+    conn.close()
+
+    if result:
+        response_message = TextSendMessage(text=result[0])
     else:
         response_message = TextSendMessage(text=incoming_message)
     

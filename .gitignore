@@ -14,3 +14,4 @@ myenv/
 
 # 其他忽略
 .DS_Store
+appcopy.py
