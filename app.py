@@ -4,9 +4,10 @@ from linebot.exceptions import InvalidSignatureError
 from linebot.models import MessageEvent, TextMessage, TextSendMessage
 import os
 import psycopg2
+from psycopg2 import sql
 from dotenv import load_dotenv
 
-load_dotenv()  # 載入 .env 文件中的環境變數
+load_dotenv()
 
 app = Flask(__name__)
 
@@ -46,19 +47,44 @@ def handle_message(event):
     incoming_message = event.message.text
     app.logger.info(f"Received message: {incoming_message}")
 
-    # 查詢資料庫中是否有對應的回應
-    conn = get_db_connection()
-    cur = conn.cursor()
-    cur.execute("SELECT response FROM keyword_responses WHERE keyword = %s", (incoming_message,))
-    result = cur.fetchone()
-    cur.close()
-    conn.close()
-
-    if result:
-        response_message = TextSendMessage(text=result[0])
+    # 檢查是否為新增功能的指令
+    if incoming_message.startswith("新增功能;"):
+        parts = incoming_message.split(";")
+        if len(parts) == 3:
+            _, keyword, response = parts
+            # 插入資料庫
+            conn = get_db_connection()
+            cur = conn.cursor()
+            try:
+                cur.execute(
+                    sql.SQL("INSERT INTO keyword_responses (keyword, response) VALUES (%s, %s)"),
+                    [keyword, response]
+                )
+                conn.commit()
+                reply_message = f"已成功新增功能：{keyword} - {response}"
+            except Exception as e:
+                conn.rollback()
+                reply_message = f"新增功能失敗：{str(e)}"
+            finally:
+                cur.close()
+                conn.close()
+        else:
+            reply_message = "指令格式錯誤，請使用：新增功能;關鍵字;回應"
     else:
-        response_message = TextSendMessage(text=incoming_message)
+        # 查詢資料庫中是否有對應的回應
+        conn = get_db_connection()
+        cur = conn.cursor()
+        cur.execute("SELECT response FROM keyword_responses WHERE keyword = %s", (incoming_message,))
+        result = cur.fetchone()
+        cur.close()
+        conn.close()
+
+        if result:
+            reply_message = result[0]
+        else:
+            reply_message = incoming_message
     
+    response_message = TextSendMessage(text=reply_message)
     app.logger.info(f"Response message: {response_message}")
     line_bot_api.reply_message(
         event.reply_token,
