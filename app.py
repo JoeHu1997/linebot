@@ -1,7 +1,7 @@
 from flask import Flask, request, abort
 from linebot import LineBotApi, WebhookHandler
 from linebot.exceptions import InvalidSignatureError
-from linebot.models import MessageEvent, TextMessage, TextSendMessage, TemplateSendMessage, ButtonsTemplate, PostbackAction
+from linebot.models import MessageEvent, TextMessage, TextSendMessage, TemplateSendMessage, ButtonsTemplate, PostbackAction, PostbackEvent
 import os
 import psycopg2
 from psycopg2 import sql
@@ -62,8 +62,6 @@ def handle_message(event):
             template=buttons_template
         )
         line_bot_api.reply_message(event.reply_token, template_message)
-    elif event.postback and event.postback.data:
-        handle_postback(event)
     else:
         # 查詢資料庫中是否有對應的回應
         conn = get_db_connection()
@@ -85,8 +83,10 @@ def handle_message(event):
             response_message
         )
 
+@handler.add(PostbackEvent)
 def handle_postback(event):
     data = event.postback.data
+    app.logger.info(f"Postback data: {data}")
     if data == "calculate_retain_wall":
         reply_message = TextSendMessage(text="你選擇了擋土牆。請輸入具體尺寸和要求。")
     elif data == "calculate_ditch_cover":
