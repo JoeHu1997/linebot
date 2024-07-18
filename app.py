@@ -88,15 +88,49 @@ def handle_postback(event):
     data = event.postback.data
     app.logger.info(f"Postback data: {data}")
     if data == "calculate_retain_wall":
-        reply_message = TextSendMessage(text="你選擇了擋土牆。請輸入具體尺寸和要求。")
+        reply_message = TextSendMessage(text="你選擇了擋土牆。請輸入長度和高度，格式：長度,高度")
     elif data == "calculate_ditch_cover":
-        reply_message = TextSendMessage(text="你選擇了水溝加蓋。請輸入具體尺寸和要求。")
+        reply_message = TextSendMessage(text="你選擇了水溝加蓋。請輸入長度和寬度，格式：長度,寬度")
     elif data == "calculate_corner_improvement":
-        reply_message = TextSendMessage(text="你選擇了截角改善。請輸入具體尺寸和要求。")
+        reply_message = TextSendMessage(text="你選擇了截角改善。請輸入長度和寬度，格式：長度,寬度")
     else:
         reply_message = TextSendMessage(text="未知選項。")
 
     line_bot_api.reply_message(event.reply_token, reply_message)
+
+@handler.add(MessageEvent, message=TextMessage)
+def handle_message(event):
+    incoming_message = event.message.text
+    app.logger.info(f"Received message: {incoming_message}")
+
+    # 查詢資料庫中是否有對應的回應
+    conn = get_db_connection()
+    cur = conn.cursor()
+    cur.execute("SELECT response FROM keyword_responses WHERE keyword = %s", (incoming_message,))
+    result = cur.fetchone()
+    cur.close()
+    conn.close()
+
+    if result:
+        reply_message = result[0]
+    elif "," in incoming_message:
+        try:
+            dimensions = incoming_message.split(",")
+            length = float(dimensions[0].strip())
+            height = float(dimensions[1].strip())
+            area = length * height
+            reply_message = f"計算結果：長度 {length}m，高度 {height}m，面積 {area} 平方米。"
+        except ValueError:
+            reply_message = "輸入格式錯誤，請輸入正確的長度和高度，格式：長度,高度"
+    else:
+        reply_message = incoming_message
+
+    response_message = TextSendMessage(text=reply_message)
+    app.logger.info(f"Response message: {response_message}")
+    line_bot_api.reply_message(
+        event.reply_token,
+        response_message
+    )
 
 if __name__ == "__main__":
     app.run(host="0.0.0.0", port=int(os.environ.get("PORT", 5000)))
